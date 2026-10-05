@@ -1,0 +1,15 @@
+# Python caches and build output
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Documentation build output and cache
+site/
+.cache/
+
+# Node-local virtual environment
+.venv
