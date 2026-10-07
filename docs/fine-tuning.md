@@ -50,13 +50,14 @@ The best checkpoint is selected by the lowest validation loss and saved to
 Pass the new checkpoint to prediction:
 
 ```sh
-cryotracer predict 'MotionCorr/job003/movies1/*.mrc' \
+cryotracer predict 'MotionCorr/job003/movies1/*fractions.mrc' \
   --checkpoint runs/finetuned/checkpoints/best.ckpt \
   --box-size 512 --output-dir predictions-finetuned
 ```
 
-Adjust the path for your RELION project. CryoTracer automatically skips files
-ending exactly in `_PS.mrc`, even when the glob matches them.
+Adjust the directory for your project and keep the input glob quoted. Select
+only micrograph files with `*fractions.mrc` for RELION, or
+`*patch_aligned_doseweighted.mrc` or `*patch_aligned.mrc` for CryoSPARC.
 
 See the [prediction guide](prediction.md) for CBOX and RELION export. Run
 `cryotracer train --help` for all training options.

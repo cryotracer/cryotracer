@@ -8,8 +8,9 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "input",
         help=(
-            "Quoted MRC glob, for example 'MotionCorr/job003/movies1/*.mrc'. "
-            "Files ending in _PS.mrc are skipped."
+            "Quoted glob matching only micrograph files: '*fractions.mrc' for "
+            "RELION, or '*patch_aligned_doseweighted.mrc' or '*patch_aligned.mrc' "
+            "for CryoSPARC."
         ),
     )
     parser.add_argument(
