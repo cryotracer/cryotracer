@@ -5,7 +5,13 @@ from cryotracer.cli.common import checkpoint_source, positive_float, probability
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
     """Add prediction input, checkpoint, and output options."""
-    parser.add_argument("input", help="Quoted MRC glob, for example 'data/**/*.mrc'.")
+    parser.add_argument(
+        "input",
+        help=(
+            "Quoted MRC glob, for example 'MotionCorr/job003/movies1/*.mrc'. "
+            "Files ending in _PS.mrc are skipped."
+        ),
+    )
     parser.add_argument(
         "--checkpoint",
         type=checkpoint_source,

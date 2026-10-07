@@ -9,10 +9,14 @@ MRC headers must contain a positive pixel size.
 Replace `provided.ckpt` with your checkpoint path:
 
 ```sh
-cryotracer predict 'data/**/*.mrc' \
+cryotracer predict 'MotionCorr/job003/movies1/*.mrc' \
   --checkpoint provided.ckpt \
   --box-size 512 --output-dir predictions
 ```
+
+Run from your RELION project directory and adjust the path as needed.
+CryoTracer automatically skips files ending exactly in `_PS.mrc`, even when
+the glob matches them.
 
 You can also use `--checkpoint hf://owner/repo/file.ckpt`; CryoTracer downloads
 and caches it automatically.
@@ -38,7 +42,7 @@ By default, prediction uses the score threshold stored in the checkpoint.
 Override it with `--prediction-threshold`, using a value between 0 and 1:
 
 ```sh
-cryotracer predict 'data/**/*.mrc' \
+cryotracer predict 'MotionCorr/job003/movies1/*.mrc' \
   --checkpoint provided.ckpt \
   --box-size 160 --output-dir predictions-threshold \
   --prediction-threshold 0.5

@@ -15,6 +15,7 @@ def expand_micrographs(pattern: str) -> list[Path]:
         {
             Path(path).resolve()
             for path in glob.glob(str(Path(pattern).expanduser()), recursive=True)
+            if not path.endswith("_PS.mrc")
         }
     )
     if not paths:

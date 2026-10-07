@@ -23,10 +23,14 @@ Activate the same environment when you return to use CryoTracer.
 Replace `provided.ckpt` with the path to the checkpoint you were given:
 
 ```sh
-cryotracer predict 'data/**/*.mrc' \
+cryotracer predict 'MotionCorr/job003/movies1/*.mrc' \
   --checkpoint provided.ckpt \
   --box-size 512 --output-dir predictions
 ```
+
+Run from your RELION project directory and adjust the path as needed. Keep the
+glob quoted. CryoTracer automatically skips files ending exactly in `_PS.mrc`,
+even when the glob matches them.
 
 You can also use `--checkpoint hf://owner/repo/file.ckpt`; CryoTracer downloads
 and caches it automatically.
