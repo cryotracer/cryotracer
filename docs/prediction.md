@@ -36,21 +36,6 @@ predictions/
 Input filenames must have unique stems for CBOX export: two images named
 `image_001.mrc` in different folders would map to the same output file.
 
-## Adjust predictions
-
-By default, prediction uses the score threshold stored in the checkpoint.
-Override it with `--prediction-threshold`, using a value between 0 and 1:
-
-```sh
-cryotracer predict 'MotionCorr/job003/movies1/*.mrc' \
-  --checkpoint provided.ckpt \
-  --box-size 160 --output-dir predictions-threshold \
-  --prediction-threshold 0.5
-```
-
-Existing prediction files cause the command to stop. Use a different output
-directory or add `--overwrite` when you intend to replace those files.
-
 ## Convert saved picks for RELION
 
 Prediction always saves CBOX filaments. Use the separate

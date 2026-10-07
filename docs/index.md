@@ -15,7 +15,7 @@ the model and preprocessing settings used for prediction.
 1. [Fine-tune a checkpoint](fine-tuning.md) if you have labelled micrographs for
    your dataset.
 
-The prediction guide explains box sizes, output files, and confidence thresholds.
+The prediction guide explains box sizes and output files.
 The RELION guide covers conversion and extraction. The fine-tuning guide covers
 MRC/CBOX pairs, training controls, and using the resulting checkpoint.
 
