@@ -23,7 +23,7 @@ Activate the same environment when you return to use CryoTracer.
 Replace `provided.ckpt` with the path to the checkpoint you were given:
 
 ```sh
-cryotracer predict 'MotionCorr/job003/movies1/*fractions.mrc' \
+cryotracer predict 'MotionCorr/job002/movies1/*fractions.mrc' \
   --checkpoint provided.ckpt \
   --box-size 512 --output-dir predictions
 ```
@@ -87,8 +87,7 @@ cryotracer train labelled/ \
   --output-dir runs/finetuned
 ```
 
-CryoTracer searches the input directory recursively for MRC/CBOX pairs. You can
-also pass a Parquet metadata file directly, such as `labelled/metadata.parquet`.
+CryoTracer searches the input directory recursively for MRC/CBOX pairs.
 
 Use at least two image pairs and a new or empty output directory. The fine-tuned
 checkpoint is saved at `runs/finetuned/checkpoints/best.ckpt`. Use that

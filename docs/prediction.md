@@ -9,7 +9,7 @@ MRC headers must contain a positive pixel size.
 Replace `provided.ckpt` with your checkpoint path:
 
 ```sh
-cryotracer predict 'MotionCorr/job003/movies1/*fractions.mrc' \
+cryotracer predict 'MotionCorr/job002/movies1/*fractions.mrc' \
   --checkpoint provided.ckpt \
   --box-size 512 --output-dir predictions
 ```

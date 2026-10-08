@@ -29,4 +29,5 @@ repos:
     rev: 1.0.0
     hooks:
       - id: mdformat
-        additional_dependencies: [mdformat-gfm]
+        args: ["--number"]
+        additional_dependencies: [mdformat-gfm, mdformat-admon]

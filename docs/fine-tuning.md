@@ -3,9 +3,48 @@
 Fine-tune a provided CryoTracer checkpoint on labelled micrographs from your
 dataset. Training loads the model and preprocessing settings from the checkpoint.
 
-## Prepare labelled images
+## Prepare annotations with napari
 
-Place each MRC image beside a CBOX label file with the same stem:
+Use [napari](https://napari.org/) with the
+[napari-boxmanager plugin](https://github.com/MPI-Dortmund/napari-boxmanager)
+to trace filaments manually. Follow the plugin's installation
+instructions in a separate environment from CryoTracer, and run the GUI on a
+workstation with a graphical display.
+
+Choose at least two representative micrographs from the dataset you want to
+pick, including variation in filament density, contrast, and background. Copy
+the selected MRC files into `labelled/`, keeping their original dimensions and
+pixel size. Open them in the annotation environment:
+
+```sh
+napari_boxmanager 'labelled/*.mrc'
+```
+
+Keep the input glob quoted.
+
+!!! warning "Micrographs must be fully annotated"
+    Fully annotate every micrograph used for training or validation: trace every
+    visible target filament across the entire image, over its full visible
+    length. Annotating only a few filaments or a convenient region is not enough.
+    Unannotated filaments can be treated as background during training, teaching
+    the model to suppress real filaments. Prefer fewer completely annotated
+    micrographs to more partially annotated ones. Exclude unfinished micrographs
+    until their annotations are complete.
+
+1. Create a filament layer in napari-boxmanager. Trace each filament's
+   centreline as a separate path with at least two ordered vertices. Add enough
+   vertices to follow curves accurately, and keep crossing filaments as separate
+   paths.
+2. Inspect the whole image at a useful zoom level. Add every missed filament,
+   correct paths and endpoints, and remove false positives and duplicate traces.
+3. Export the reviewed filament layer as **CBOX** using napari-boxmanager's
+   `organize_layer` export controls.
+4. Save each CBOX file beside its MRC image with the same stem.
+   Reopen the saved annotations with the images to check that the paths align
+   and the complete set of filaments was saved.
+
+After saving, your `labelled/` directory should contain matching image and
+annotation files:
 
 ```text
 labelled/
@@ -16,13 +55,11 @@ labelled/
 ```
 
 CryoTracer searches the input directory recursively for MRC images. Each image
-must have its sibling CBOX file. You can also pass a Parquet metadata file
-directly, such as `labelled/metadata.parquet`. Use at least two micrographs.
-CryoTracer makes an 80/20 training and validation split, with at least one
-validation image, using `--seed` for reproducibility.
+must have its sibling CBOX file.
 
 ## Train from a checkpoint
 
+Pass the completed `labelled/` directory to training with a provided checkpoint.
 Use a new or empty output directory:
 
 ```sh
@@ -30,6 +67,9 @@ cryotracer train labelled/ \
   --checkpoint provided.ckpt \
   --output-dir runs/finetuned
 ```
+
+CryoTracer makes an 80/20 training and validation split, with at least one
+validation image, using `--seed` for reproducibility.
 
 You can also use `--checkpoint hf://owner/repo/file.ckpt`; CryoTracer downloads
 and caches it automatically.
@@ -50,7 +90,7 @@ The best checkpoint is selected by the lowest validation loss and saved to
 Pass the new checkpoint to prediction:
 
 ```sh
-cryotracer predict 'MotionCorr/job003/movies1/*fractions.mrc' \
+cryotracer predict 'MotionCorr/job002/movies1/*fractions.mrc' \
   --checkpoint runs/finetuned/checkpoints/best.ckpt \
   --box-size 512 --output-dir predictions-finetuned
 ```
