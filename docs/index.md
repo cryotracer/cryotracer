@@ -9,6 +9,10 @@ conversion command samples the saved filaments for RELION extraction.
 You need MRC micrographs and a CryoTracer checkpoint. The checkpoint contains
 the model and preprocessing settings used for prediction.
 
+The [pretrained alpha-synuclein checkpoint](https://huggingface.co/cryotracer/cryotracer-alpha-synuclein)
+is available on Hugging Face for prediction and fine-tuning. The guides below
+show how to download and cache it automatically with `--checkpoint`.
+
 1. [Install CryoTracer](installation.md) and check that the command is available.
 2. [Predict filaments](prediction.md) to save CBOX picks.
 3. [Convert CBOX picks to RELION coordinates](relion.md) for particle extraction.

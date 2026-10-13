@@ -6,11 +6,12 @@ MRC headers must contain a positive pixel size.
 
 ## Export CBOX picks
 
-Replace `provided.ckpt` with your checkpoint path:
+Use the [pretrained alpha-synuclein checkpoint](https://huggingface.co/cryotracer/cryotracer-alpha-synuclein)
+to pick filaments:
 
 ```sh
 cryotracer predict 'MotionCorr/job002/movies1/*fractions.mrc' \
-  --checkpoint provided.ckpt \
+  --checkpoint hf://cryotracer/cryotracer-alpha-synuclein/best.ckpt \
   --box-size 512 --output-dir predictions
 ```
 
@@ -22,8 +23,9 @@ micrograph files:
 
 Adjust the directory for your project and keep the input glob quoted.
 
-You can also use `--checkpoint hf://owner/repo/file.ckpt`; CryoTracer downloads
-and caches it automatically.
+CryoTracer downloads and caches the Hugging Face checkpoint automatically.
+To use a local checkpoint, pass its path instead, such as
+`--checkpoint provided.ckpt`.
 
 `--box-size` is the box width in original image pixels. CryoTracer writes one
 file per input image under `predictions/cbox/`, including an empty CBOX file

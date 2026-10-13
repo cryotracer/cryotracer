@@ -2,7 +2,7 @@
 
 CryoTracer finds filaments in cryo-EM micrographs and saves the picks as CBOX
 files. Convert the saved filaments to RELION coordinates in a separate step.
-Start with a provided CryoTracer checkpoint and your MRC images.
+Start with a pretrained CryoTracer checkpoint and your MRC images.
 
 ## Install
 
@@ -18,13 +18,18 @@ cryotracer --help
 
 Activate the same environment when you return to use CryoTracer.
 
+## Pretrained checkpoint
+
+A pretrained checkpoint for alpha-synuclein filament picking is available on
+[Hugging Face](https://huggingface.co/cryotracer/cryotracer-alpha-synuclein).
+
 ## Predict filaments
 
-Replace `provided.ckpt` with the path to the checkpoint you were given:
+Pick filaments with the pretrained alpha-synuclein checkpoint:
 
 ```sh
 cryotracer predict 'MotionCorr/job002/movies1/*fractions.mrc' \
-  --checkpoint provided.ckpt \
+  --checkpoint hf://cryotracer/cryotracer-alpha-synuclein/best.ckpt \
   --box-size 512 --output-dir predictions
 ```
 
@@ -36,8 +41,9 @@ micrograph files:
 
 Adjust the directory for your project and keep the input glob quoted.
 
-You can also use `--checkpoint hf://owner/repo/file.ckpt`; CryoTracer downloads
-and caches it automatically.
+CryoTracer downloads and caches the Hugging Face checkpoint automatically.
+To use a local checkpoint, pass its path instead, such as
+`--checkpoint provided.ckpt`.
 
 `--box-size` sets the CBOX box width in the original image pixels. CryoTracer
 writes one CBOX file per MRC image in the `cbox/` subdirectory, such as
@@ -79,11 +85,11 @@ labelled/
   image_002.cbox
 ```
 
-Then fine-tune the provided checkpoint:
+Then fine-tune the pretrained alpha-synuclein checkpoint:
 
 ```sh
 cryotracer train labelled/ \
-  --checkpoint provided.ckpt \
+  --checkpoint hf://cryotracer/cryotracer-alpha-synuclein/best.ckpt \
   --output-dir runs/finetuned
 ```
 

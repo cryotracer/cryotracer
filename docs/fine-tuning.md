@@ -1,7 +1,8 @@
 # Fine-tuning
 
-Fine-tune a provided CryoTracer checkpoint on labelled micrographs from your
-dataset. Training loads the model and preprocessing settings from the checkpoint.
+Fine-tune a local or Hugging Face CryoTracer checkpoint on labelled micrographs
+from your dataset. Training loads the model and preprocessing settings from the
+checkpoint.
 
 ## Prepare annotations with napari
 
@@ -59,20 +60,22 @@ must have its sibling CBOX file.
 
 ## Train from a checkpoint
 
-Pass the completed `labelled/` directory to training with a provided checkpoint.
+Pass the completed `labelled/` directory to training with a checkpoint, such as
+the [pretrained alpha-synuclein checkpoint](https://huggingface.co/cryotracer/cryotracer-alpha-synuclein).
 Use a new or empty output directory:
 
 ```sh
 cryotracer train labelled/ \
-  --checkpoint provided.ckpt \
+  --checkpoint hf://cryotracer/cryotracer-alpha-synuclein/best.ckpt \
   --output-dir runs/finetuned
 ```
 
 CryoTracer makes an 80/20 training and validation split, with at least one
 validation image, using `--seed` for reproducibility.
 
-You can also use `--checkpoint hf://owner/repo/file.ckpt`; CryoTracer downloads
-and caches it automatically.
+CryoTracer downloads and caches the Hugging Face checkpoint automatically.
+To use a local checkpoint, pass its path instead, such as
+`--checkpoint provided.ckpt`.
 
 The checkpoint determines the model's query count, polyline point count, and
 preprocessing. Do not supply `--num-queries` or `--num-points` when loading a
