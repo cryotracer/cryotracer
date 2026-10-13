@@ -96,6 +96,11 @@ path with `predict` when you want to pick with the fine-tuned model.
 Run `cryotracer predict --help`, `cryotracer relion --help`, or
 `cryotracer train --help` for more options.
 
+## EMPIAR-10022 dataset
+
+The [EMPIAR-10022 filament dataset](https://huggingface.co/datasets/cryotracer/empiar10022-filaments)
+contains 109 cryo-EM micrographs with matching CBOX filament annotations.
+
 ## License
 
 CryoTracer's original code and modifications are licensed under
