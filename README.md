@@ -4,6 +4,9 @@ CryoTracer finds filaments in cryo-EM micrographs and saves the picks as CBOX
 files. Convert the saved filaments to RELION coordinates in a separate step.
 Start with a pretrained CryoTracer checkpoint and your MRC images.
 
+See the [documentation](https://cryotracer.github.io/cryotracer/) for detailed
+guides.
+
 ## Install
 
 Use Python 3.11–3.14 and Git. Create a virtual environment and install
