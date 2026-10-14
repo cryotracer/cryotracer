@@ -107,6 +107,25 @@ Run `cryotracer predict --help`, `cryotracer relion --help`, or
 The [EMPIAR-10022 filament dataset](https://huggingface.co/datasets/cryotracer/empiar10022-filaments)
 contains 109 cryo-EM micrographs with matching CBOX filament annotations.
 
+## Citation
+
+If you use CryoTracer in your research, please cite
+[our paper](https://arxiv.org/abs/2610.18696):
+
+```bibtex
+@misc{kuczbanski2026cryotracer,
+  title = {{CryoTracer}: A Synthetic-to-Real System for Filament Instance Tracing in {Cryo-EM}},
+  author = {Kuczbański, Radosław and Kozłowski, Wojciech and
+            Grzesiuk, Mateusz and Karanowski, Konrad and Frey, Lukas and
+            Rzepiela, Andrzej and Zięba, Maciej},
+  year = {2026},
+  eprint = {2610.18696},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.CV},
+  url = {https://arxiv.org/abs/2610.18696}
+}
+```
+
 ## License
 
 CryoTracer's original code and modifications are licensed under
