@@ -1,8 +1,10 @@
 from collections.abc import Callable
+from copy import deepcopy
 
 import numpy as np
 import torch
 from PIL import Image, ImageDraw, ImageFilter
+from scipy.ndimage import gaussian_filter
 from torch.utils.data import Dataset
 
 from cryotracer.data.geometry import Polyline, clip_polyline
@@ -11,10 +13,10 @@ from cryotracer.data.geometry import Polyline, clip_polyline
 class SyntheticFilamentDataset(Dataset):
     """Deterministic-per-epoch full-frame synthetic filament micrographs.
 
-    A sample is a pure function of ``(seed, epoch, index)``. This keeps labels,
-    noise, and augmentations identical between matched ablation arms while
-    generating a fresh training sample for every epoch. Plain integer indices
-    use epoch zero so validation samples remain fixed.
+    A sample is a pure function of ``(seed, epoch, index)``, giving reproducible
+    runs with fresh training samples every epoch. Appearance variants share
+    curves, widths, and augmentations. Plain integer indices use epoch zero so
+    validation samples remain fixed.
     """
 
     def __init__(
@@ -23,20 +25,34 @@ class SyntheticFilamentDataset(Dataset):
         image_size: int = 4096,
         num_samples: int = 128,
         seed: int = 42,
-        max_filaments: int = 30,
+        max_filaments: int = 40,
         empty_probability: float = 0.1,
         pixel_size_angstrom: float | tuple[float, float] = (0.65, 1.5),
         render_size: int | None = None,
         filament_width_angstrom: float | tuple[float, float] = (100.0, 200.0),
+        contrast_to_background_sigma: tuple[float, float] = (0.2, 2.0),
+        easy_filament_probability: float = 0.1,
     ) -> None:
         if image_size <= 0:
             raise ValueError("image_size must be positive")
         if num_samples <= 0:
             raise ValueError("num_samples must be positive")
-        if not 0 < max_filaments <= 30:
-            raise ValueError("max_filaments must be between 1 and 30")
+        if max_filaments <= 0:
+            raise ValueError("max_filaments must be positive")
         if not 0 <= empty_probability <= 1:
             raise ValueError("empty_probability must be between 0 and 1")
+        if not 0 <= easy_filament_probability <= 1:
+            raise ValueError("easy_filament_probability must be between 0 and 1")
+        if (
+            len(contrast_to_background_sigma) != 2
+            or not np.isfinite(contrast_to_background_sigma).all()
+            or not 0
+            < contrast_to_background_sigma[0]
+            <= contrast_to_background_sigma[1]
+        ):
+            raise ValueError(
+                "contrast_to_background_sigma must be a positive ordered range"
+            )
         render_size = render_size or image_size
         if render_size <= 0 or image_size % render_size != 0:
             raise ValueError("render_size must be a positive divisor of image_size")
@@ -61,6 +77,8 @@ class SyntheticFilamentDataset(Dataset):
             else filament_width_angstrom
         )
         self.native_to_render = self.render_size / self.image_size
+        self.contrast_to_background_sigma = contrast_to_background_sigma
+        self.easy_filament_probability = easy_filament_probability
 
     def __len__(self) -> int:
         return self.num_samples
@@ -123,6 +141,12 @@ class SyntheticFilamentDataset(Dataset):
         native_size = self.image_size
         render_size = self.render_size
         native_to_render = self.native_to_render
+        # Keep geometry and widths independent of contrast settings.
+        extra = deepcopy(rng)
+        geometry_rng, contrast_rng, background_rng = [
+            np.random.default_rng(seed)
+            for seed in extra.integers(0, np.iinfo(np.int64).max, size=3)
+        ]
         dark_background = bool(rng.integers(0, 2))
         background = 18 if dark_background else 237
         foreground = 237 if dark_background else 18
@@ -134,13 +158,41 @@ class SyntheticFilamentDataset(Dataset):
         else:
             filament_count = int(rng.integers(1, self.max_filaments + 1))
 
+        if filament_count:
+            # Mix sparse and denser scenes; counts above 30 remain rare.
+            if self.max_filaments > 30 and geometry_rng.random() < 0.05:
+                filament_count = int(geometry_rng.integers(31, self.max_filaments + 1))
+            else:
+                cap = min(self.max_filaments, 30)
+                if cap <= 10 or geometry_rng.random() < 0.5:
+                    filament_count = int(geometry_rng.integers(1, min(cap, 10) + 1))
+                else:
+                    filament_count = int(geometry_rng.integers(11, cap + 1))
+            direction = float(geometry_rng.uniform(0, 2 * np.pi))
+            aligned = geometry_rng.random() < 0.75
+            angle_sigma = float(geometry_rng.uniform(0.04, 0.25))
+            crossing_scene = filament_count >= 2 and geometry_rng.random() < 0.1
+            crossing_center = geometry_rng.uniform(0.15, 0.85, size=2) * native_size
+            crossing_angle = float(geometry_rng.uniform(np.pi / 18, np.pi / 2))
+            crossing_half_length = native_size * float(geometry_rng.uniform(0.12, 0.4))
+
         polylines: list[Polyline] = []
         widths_angstrom: list[float] = []
         for filament_index in range(filament_count):
-            if filament_index < 2 and filament_count >= 2:
-                polyline = self._crossing_polyline(rng, filament_index)
+            if crossing_scene and filament_index < 2:
+                angle = direction + filament_index * crossing_angle
+                vector = np.array([np.cos(angle), np.sin(angle)])
+                positions = np.linspace(-crossing_half_length, crossing_half_length, 32)
+                polyline = (crossing_center + positions[:, None] * vector).tolist()
             else:
-                polyline = self._curved_polyline(rng)
+                angle = (
+                    direction + float(geometry_rng.normal(0, angle_sigma))
+                    if aligned
+                    else float(geometry_rng.uniform(0, 2 * np.pi))
+                )
+                polyline = self._visible_polyline(
+                    geometry_rng, angle, pixel_size_angstrom
+                )
 
             clipped = clip_polyline(polyline, (0, 0, native_size, native_size))
             if clipped is None:
@@ -165,10 +217,40 @@ class SyntheticFilamentDataset(Dataset):
         array = np.asarray(image, dtype=np.float32) / 255.0
         y_gradient = np.linspace(-1.0, 1.0, render_size, dtype=np.float32)[:, None]
         x_gradient = np.linspace(-1.0, 1.0, render_size, dtype=np.float32)[None, :]
-        array += float(rng.uniform(-0.08, 0.08)) * x_gradient
-        array += float(rng.uniform(-0.08, 0.08)) * y_gradient
+        background_field = float(rng.uniform(-0.08, 0.08)) * x_gradient
+        background_field = (
+            background_field + float(rng.uniform(-0.08, 0.08)) * y_gradient
+        )
         noise = rng.standard_normal(array.shape, dtype=np.float32)
-        array += noise * rng.uniform(0.01, 0.08)
+        noise_sigma = rng.uniform(0.01, 0.08)
+        colored = gaussian_filter(noise, sigma=float(background_rng.uniform(0.5, 2)))
+        colored /= max(float(colored.std()), 1e-6)
+        noise = (noise + colored) / 2
+        noise /= max(float(noise.std()), 1e-6)
+        coarse = background_rng.standard_normal((8, 8), dtype=np.float32)
+        ice = np.asarray(
+            Image.fromarray(coarse).resize(
+                (render_size, render_size), Image.Resampling.BILINEAR
+            ),
+            dtype=np.float32,
+        ).copy()
+        ice -= ice.mean()
+        ice /= max(float(ice.std()), 1e-6)
+        background_field += float(background_rng.uniform(0, 0.04)) * ice
+        background_field += noise * noise_sigma
+        if contrast_rng.random() < self.easy_filament_probability:
+            ratio = float(contrast_rng.uniform(3, 8))
+        else:
+            ratio = float(
+                np.exp(contrast_rng.uniform(*np.log(self.contrast_to_background_sigma)))
+            )
+        scale = (
+            ratio * float(background_field.std()) / (abs(foreground - background) / 255)
+        )
+        # Center the intensity range so weak signal and noise are not
+        # clipped against the original near-black/near-white background.
+        array = 0.5 + (array - background / 255) * scale
+        array += background_field
 
         # Contrast inversion is sampled independently of the initial black/white
         # background so both polarities occur through two deterministic routes.
@@ -177,50 +259,55 @@ class SyntheticFilamentDataset(Dataset):
         array = np.clip(array, 1e-4, 1.0 - 1e-4)
         return torch.from_numpy(array).unsqueeze(0), polylines, widths_angstrom
 
-    def _curved_polyline(self, rng: np.random.Generator) -> Polyline:
-        size = self.image_size
-        margin = size * 0.2
-        start = rng.uniform(-margin, size + margin, size=2)
-        end = rng.uniform(-margin, size + margin, size=2)
-        while np.linalg.norm(end - start) < size * 0.25:
-            end = rng.uniform(-margin, size + margin, size=2)
-
-        direction = end - start
-        normal = np.array([-direction[1], direction[0]])
-        normal /= max(float(np.linalg.norm(normal)), 1e-6)
-        bend = normal * rng.uniform(-0.3, 0.3) * np.linalg.norm(direction)
-        control_1 = start + direction / 3 + bend
-        control_2 = start + 2 * direction / 3 - bend * rng.uniform(0.2, 1.0)
-
-        t = np.linspace(0.0, 1.0, 32, dtype=np.float64)[:, None]
-        points = (
-            (1 - t) ** 3 * start
-            + 3 * (1 - t) ** 2 * t * control_1
-            + 3 * (1 - t) * t**2 * control_2
-            + t**3 * end
-        )
-        return [(float(x), float(y)) for x, y in points]
-
-    def _crossing_polyline(
-        self, rng: np.random.Generator, filament_index: int
+    def _visible_polyline(
+        self, rng: np.random.Generator, angle: float, pixel_size_angstrom: float
     ) -> Polyline:
-        size = self.image_size
-        center = np.array([size / 2, size / 2]) + rng.uniform(
-            -size * 0.08, size * 0.08, size=2
-        )
-        base_angle = rng.uniform(-0.2, 0.2)
-        angle = base_angle + filament_index * np.pi / 2
+        """Sample arc length in physical units and fit one complete trace in-frame."""
         direction = np.array([np.cos(angle), np.sin(angle)])
         normal = np.array([-direction[1], direction[0]])
-        distance = size * rng.uniform(0.65, 0.9)
-        t = np.linspace(-distance, distance, 32)
-        points = center + t[:, None] * direction
-        points += (
-            np.sin(np.linspace(-np.pi, np.pi, len(t)))[:, None]
-            * normal
-            * size
-            * rng.uniform(0.01, 0.06)
+        t = np.linspace(0, 1, 32)
+        if rng.random() < 0.7:
+            bend = float(rng.uniform(-0.005, 0.005))
+        else:
+            upper = 0.5 if rng.random() < 0.1 else 0.12
+            bend = float(rng.uniform(0.015, upper)) * (1 if rng.random() < 0.5 else -1)
+        points = (t - 0.5)[:, None] * direction + (bend * np.sin(np.pi * t))[
+            :, None
+        ] * normal
+        points /= np.linalg.norm(np.diff(points, axis=0), axis=1).sum()
+        # Long-length bins are conditional on the field of view and orientation.
+        # Fitting the entire curve also avoids joining separated clipped pieces.
+        max_length_nm = (
+            self.image_size
+            / np.ptp(points, axis=0).max()
+            * pixel_size_angstrom
+            / 10
+            * 0.98
         )
+        lower = np.array([3.0, 50.0, 300.0])
+        upper = np.minimum([50.0, 300.0, 650.0], max_length_nm)
+        weights = np.array([0.1, 0.65, 0.25]) * (upper > lower)
+        if weights.sum() == 0:
+            length_nm = float(rng.uniform(max_length_nm * 0.1, max_length_nm))
+        else:
+            bucket = int(rng.choice(3, p=weights / weights.sum()))
+            length_nm = float(rng.uniform(lower[bucket], upper[bucket]))
+        points *= length_nm * 10 / pixel_size_angstrom
+        minimum, maximum = points.min(axis=0), points.max(axis=0)
+        translation = rng.uniform(-minimum, self.image_size - maximum)
+        if rng.random() < 0.65:
+            # Attach an endpoint to a border when it is an extremum of the curve.
+            choices = []
+            for endpoint in points[[0, -1]]:
+                for axis in (0, 1):
+                    if np.isclose(endpoint[axis], minimum[axis], atol=1e-8, rtol=0):
+                        choices.append((axis, -minimum[axis]))
+                    if np.isclose(endpoint[axis], maximum[axis], atol=1e-8, rtol=0):
+                        choices.append((axis, self.image_size - maximum[axis]))
+            if choices:
+                axis, value = choices[int(rng.integers(len(choices)))]
+                translation[axis] = value
+        points += translation
         return [(float(x), float(y)) for x, y in points]
 
     @staticmethod

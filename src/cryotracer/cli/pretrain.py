@@ -37,8 +37,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     generator.add_argument(
         "--max-filaments",
         type=positive_int,
-        default=30,
-        help="Maximum filaments per synthetic image (1 to 30).",
+        default=40,
+        help="Maximum filaments per synthetic image.",
     )
     generator.add_argument(
         "--empty-probability",
@@ -62,6 +62,20 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         default=(100.0, 200.0),
         help="Synthetic filament width range in angstroms; equal bounds are allowed.",
     )
+    generator.add_argument(
+        "--contrast-to-background-sigma",
+        type=positive_float,
+        nargs=2,
+        metavar=("MIN", "MAX"),
+        default=(0.2, 2.0),
+        help="Filament contrast relative to background standard deviation.",
+    )
+    generator.add_argument(
+        "--easy-filament-probability",
+        type=probability,
+        default=0.1,
+        help="Probability of a high-contrast synthetic image.",
+    )
 
 
 def validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -69,11 +83,13 @@ def validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> 
     validate_initialization(args, parser)
     if args.image_size % PREPROCESSING_CONFIG["downsample"]:
         parser.error("--image-size must be divisible by 4")
-    if args.max_filaments > 30:
-        parser.error("--max-filaments must be between 1 and 30")
     if args.num_queries is not None and args.max_filaments > args.num_queries:
         parser.error("--max-filaments must not exceed --num-queries")
-    for name in ("pixel_size_angstrom", "filament_width_angstrom"):
+    for name in (
+        "pixel_size_angstrom",
+        "filament_width_angstrom",
+        "contrast_to_background_sigma",
+    ):
         lower, upper = getattr(args, name)
         if lower > upper:
             parser.error(f"--{name.replace('_', '-')} requires MIN <= MAX")

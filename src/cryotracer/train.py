@@ -28,6 +28,8 @@ SYNTHETIC_OPTIONS = (
     "empty_probability",
     "pixel_size_angstrom",
     "filament_width_angstrom",
+    "contrast_to_background_sigma",
+    "easy_filament_probability",
 )
 
 
