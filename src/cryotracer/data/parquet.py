@@ -23,7 +23,8 @@ class ParquetDataset(Dataset):
         transform: Callable,
     ):
         paths = [data_path] if isinstance(data_path, (str, Path)) else data_path
-        self.data_paths = [Path(path).expanduser().resolve() for path in paths]
+        # Relative MRC paths belong beside the metadata link, not its target.
+        self.data_paths = [Path(path).expanduser().absolute() for path in paths]
         if not self.data_paths:
             raise ValueError("At least one metadata path is required")
         self.transform = transform

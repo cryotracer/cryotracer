@@ -75,7 +75,8 @@ def resolve_run(args):
         key: _plain(value) for key, value in vars(args).items() if key != "handler"
     }
     if config.get("input"):
-        config["input"] = str(Path(config["input"]).expanduser().absolute())
+        # Preserve the input name and directory when it points into a data cache.
+        config["input"] = str(Path(args.input).expanduser().absolute())
     return config
 
 
