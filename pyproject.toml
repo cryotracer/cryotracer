@@ -37,7 +37,7 @@ dependencies = [
     "huggingface-hub==1.32.0",
     "numpy==2.4.6",
     "pandas==3.0.6",
-    "pyarrow==25.0.1",
+    "pyarrow==26.0.0",
     "scipy==1.17.1",
     "mrcfile==1.5.4",
     "starfile==0.5.13",
