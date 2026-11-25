@@ -117,10 +117,10 @@ If you use CryoTracer in your research, please cite
 
 ```bibtex
 @misc{kuczbanski2026cryotracer,
-  title = {{CryoTracer}: A Synthetic-to-Real System for Filament Instance Tracing in {Cryo-EM}},
+  title = {{CryoTracer}: Synthetic-to-Real Filament Instance Tracing in {Cryo-EM}},
   author = {Kuczbański, Radosław and Kozłowski, Wojciech and
             Grzesiuk, Mateusz and Karanowski, Konrad and Frey, Lukas and
-            Rzepiela, Andrzej and Zięba, Maciej},
+            Zięba, Maciej},
   year = {2026},
   eprint = {2610.18696},
   archivePrefix = {arXiv},
